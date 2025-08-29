@@ -21,23 +21,29 @@ jobs:
           script: |
             const prNumber = context.issue.number;
             const sender = context.actor;
-            // สร้าง payload.json ตามโครงสร้างที่คุณจะใช้กับ Jenkins
+            // ดึง PR object เต็มด้วย GitHub API
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            // สร้าง payload.json ตาม structure ที่จะส่งไป Jenkins
             const payload = {
               action: context.payload.action,
               number: context.payload.issue.number,
               pull_request: {
-                title: context.payload.issue.title,
+                title: pr.title,
                 head: {
                   repo: {
-                    clone_url: context.payload.issue.pull_request.head.repo.clone_url,
-                    name: context.payload.issue.pull_request.head.repo.name
+                    clone_url: pr.head.repo.clone_url,
+                    name: pr.head.repo.name
                   },
-                  ref: context.payload.issue.pull_request.head.ref
+                  ref: pr.head.ref
                 },
                 base: {
-                  ref: context.payload.issue.pull_request.base.ref
+                  ref: pr.base.ref
                 },
-                html_url: context.payload.issue.pull_request.html_url
+                html_url: pr.html_url
               },
               repository: {
                 full_name: context.payload.repository.full_name
