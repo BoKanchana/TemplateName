@@ -12,7 +12,7 @@ jobs:
   test-slash-command:
     if: |
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/run-e2e')
+      startsWith(github.event.comment.body, 'jenkins rebuild')
     runs-on: ubuntu-latest
     steps:
       - name: Reply on pull request comment
