@@ -19,13 +19,21 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const context = context;
             const prNumber = context.issue.number;
-            const commentId = context.payload.comment.id;
             const sender = context.actor;
+            const payload = JSON.stringify(context.payload, null, 2);
+            // เนื่องจาก comment ใน GitHub รองรับ string ได้สูงสุด ~65,535 ตัวอักษร
+            // ควรตัด payload ถ้ายาวเกินไป
+            const safePayload = payload.length > 60000 ? payload.slice(0, 60000) + '\n...truncated...' : payload;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `ตรวจพบ slash command "/run-e2e" โดย @${sender}.\nเงื่อนไข if ผ่านแน้ว (test success)! 👍 \nโดยมี context จ้า : ${context}`
+              body: [
+                `@${sender} triggerd /run-e2e. Payload from event:`,
+                '',
+                '```json',
+                safePayload,
+                '```'
+              ].join('\n')
             });
