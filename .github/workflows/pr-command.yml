@@ -9,31 +9,55 @@ permissions:
   pull-requests: write
 
 jobs:
-  test-slash-command:
+  preview-json-payload:
     if: |
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, 'jenkins rebuild')
+      contains(github.event.comment.body, 'jenkins rebuild')
     runs-on: ubuntu-latest
     steps:
-      - name: Reply on pull request comment
+      - name: Prepare payload.json & comment to PR
         uses: actions/github-script@v7
         with:
           script: |
             const prNumber = context.issue.number;
             const sender = context.actor;
-            const payload = JSON.stringify(context.payload, null, 2);
-            // เนื่องจาก comment ใน GitHub รองรับ string ได้สูงสุด ~65,535 ตัวอักษร
-            // ควรตัด payload ถ้ายาวเกินไป
-            const safePayload = payload.length > 60000 ? payload.slice(0, 60000) + '\n...truncated...' : payload;
+            // สร้าง payload.json ตามโครงสร้างที่คุณจะใช้กับ Jenkins
+            const payload = {
+              action: context.payload.action,
+              number: context.payload.issue.number,
+              pull_request: {
+                title: context.payload.issue.title,
+                head: {
+                  repo: {
+                    clone_url: context.payload.issue.pull_request.head.repo.clone_url,
+                    name: context.payload.issue.pull_request.head.repo.name
+                  },
+                  ref: context.payload.issue.pull_request.head.ref
+                },
+                base: {
+                  ref: context.payload.issue.pull_request.base.ref
+                },
+                html_url: context.payload.issue.pull_request.html_url
+              },
+              repository: {
+                full_name: context.payload.repository.full_name
+              }
+            };
+            // แปลงเป็น string & ตัดความยาวถ้าเกิน limit
+            let bodyJson = JSON.stringify(payload, null, 2);
+            if (bodyJson.length > 60000) {
+              bodyJson = bodyJson.slice(0, 60000) + '\n...truncated...';
+            }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
               body: [
-                `@${sender} triggerd /run-e2e. Payload from event:`,
-                '',
+                `@${sender} Triggered **jenkins rebuild** command.`,
+                ``,
+                `Preview payload.json ที่จะส่งไป Jenkins:`,
                 '```json',
-                safePayload,
+                bodyJson,
                 '```'
               ].join('\n')
             });
