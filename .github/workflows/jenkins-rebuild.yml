@@ -1,0 +1,30 @@
+name: PR Jenkins Rebuild 2
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  pr-rebuild-comment:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'jenkins rebuild')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment back to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const sender = context.actor;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `🚀🍎 @${sender} triggered **jenkins rebuild**`
+            });
