@@ -10,40 +10,27 @@ permissions:
   pull-requests: write
 
 jobs:
-  pr-rebuild-comment:
+  rebuild-pr:
     if: |
       github.event.issue.pull_request &&
       contains(github.event.comment.body, 'jenkins rebuild')
     runs-on: ubuntu-latest
     steps:
-      - name: Reply to PR with test message
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = context.issue.number;
-            const sender = context.actor;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: `✅ @${sender} ได้คอมเมนต์ว่า **jenkins rebuild** แล้ว Workflow ทำงานสำเร็จ`
-            });
-
-      - name: Extract PR info
-        id: pr-info
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = context.issue.number;
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-            core.setOutput("branch", pr.head.ref);
-            core.setOutput("pr_number", pr.number);
-
-      - name: Trigger Jenkins Job
+      - name: Call httpbin
+        id: call_httpbin
         run: |
-          curl --location 'localhost:8080/books/inquiry?title=book1'
+          echo "Calling httpbin..."
+          # ส่ง GET request และรอ response
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://httpbin.org/get)
+          echo "HTTP status: $RESPONSE"
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Request failed"
+            exit 1
+          fi
+
+      - name: Comment on PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.issue.number }}
+          body: "✅ httpbin responded successfully. Ready to rebuild Jenkins!"
