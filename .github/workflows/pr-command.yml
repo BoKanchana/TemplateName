@@ -1,26 +1,52 @@
-name: PR Slash Command Trigger
+name: PR Jenkins Rebuild
 
 on:
+  workflow_dispatch:
   issue_comment:
     types: [created]
 
+permissions:
+  issues: write
+  pull-requests: write
+
 jobs:
-  test-slash-command:
+  rebuild-pr:
     if: |
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/run-e2e')
+      contains(github.event.comment.body, 'jenkins rebuild')
     runs-on: ubuntu-latest
     steps:
-      - name: Reply on pull request comment
+      - name: Call httpbin
+        id: call_httpbin
+        run: |
+          echo "Calling httpbin..."
+          # ส่ง GET request และรอ response
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://httpbin.org/get)
+          echo "HTTP status: $RESPONSE"
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Request failed"
+            exit 1
+          fi
+
+      - name: Extract PR info
+        id: pr-info
         uses: actions/github-script@v7
         with:
           script: |
             const prNumber = context.issue.number;
-            const commentId = context.payload.comment.id;
-            const sender = context.actor;
-            await github.rest.issues.createComment({
+            const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
-              body: `ตรวจพบ slash command "/run-e2e" โดย @${sender}.\nเงื่อนไข if ผ่านแน้ว (test success)! 👍`
+              pull_number: prNumber,
             });
+            core.setOutput("branch", pr.head.ref);
+            core.setOutput("pr_number", pr.number);
+      - name: Comment on PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ✅ httpbin responded successfully. Ready to rebuild Jenkins!
+            - Branch: `${{ steps.pr-info.outputs.branch }}`
+            - PR Number: `${{ steps.pr-info.outputs.pr_number }}`
