@@ -1,6 +1,7 @@
 name: PR Jenkins Rebuild
 
 on:
+  workflow_dispatch:
   issue_comment:
     types: [created]
 
@@ -15,7 +16,7 @@ jobs:
       contains(github.event.comment.body, 'jenkins rebuild')
     runs-on: ubuntu-latest
     steps:
-      - name: Comment back to PR
+      - name: Reply to PR with test message
         uses: actions/github-script@v7
         with:
           script: |
@@ -26,5 +27,23 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `🚀 @${sender} triggered **jenkins rebuild**`
+              body: `✅ @${sender} ได้คอมเมนต์ว่า **jenkins rebuild** แล้ว Workflow ทำงานสำเร็จ`
             });
+
+      - name: Extract PR info
+        id: pr-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            core.setOutput("branch", pr.head.ref);
+            core.setOutput("pr_number", pr.number);
+
+      - name: Trigger Jenkins Job
+        run: |
+          curl --location 'localhost:8080/books/inquiry?title=book1'
