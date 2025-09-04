@@ -1,0 +1,27 @@
+name: Rerun Jenkins
+
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  jenkins-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Jenkins Check (failed)
+        uses: LouisBrunner/checks-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Jenkins Build
+          conclusion: failure
+          output: |
+            {
+              "title": "Jenkins Failed",
+              "summary": "Job failed. Click below to rerun.",
+              "text": "[🔄 Re-run Jenkins](https://github.com/BoKanchana/TemplateName/blob/main/.github/workflows/pr-command.yml)"
+            }
