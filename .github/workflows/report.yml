@@ -18,10 +18,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: Jenkins Build
+          status: completed
           conclusion: failure
           output: |
             {
               "title": "Jenkins Failed",
               "summary": "Job failed. Click below to rerun.",
-              "text": "[🔄 Re-run Jenkins](https://github.com/BoKanchana/TemplateName/blob/main/.github/workflows/pr-command.yml)"
+              "text": "[🔄 Re-run Jenkins](https://github.com/BoKanchana/TemplateName/actions/workflows/pr-command.yml)"
             }
