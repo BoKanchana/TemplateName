@@ -6,7 +6,8 @@ on:
     types: [created, edited]
 
 permissions:
-  issues: write
+  contents: read
+  checks: write   # ✅ ต้องมี
   pull-requests: write
 
 jobs:
